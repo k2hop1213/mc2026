@@ -1,5 +1,9 @@
 # 마이크로컨트롤러응용 (2026) — VS Code 개발환경
 
+> 수업 원본 저장소([PGH0621/mc2026](https://github.com/PGH0621/mc2026))를 바탕으로,
+> **차시별로 실습 코드를 폴더째 보관**하도록 정리한 개인 실습 저장소입니다.
+> 수업 안내와 다르면 수업 안내를 따르세요.
+
 Arduino IDE 대신 **VS Code + PlatformIO** 로 실습합니다.
 Windows 와 macOS 가 **완전히 동일한 컴파일러·코어 버전**을 쓰도록 구성되어 있습니다.
 
@@ -24,7 +28,7 @@ Windows 와 macOS 가 **완전히 동일한 컴파일러·코어 버전**을 쓰
 ### 1단계 — 저장소 내려받기
 
 ```bash
-git clone https://github.com/PGH0621/mc2026.git
+git clone https://github.com/k2hop1213/mc2026.git
 cd mc2026
 ```
 
@@ -95,17 +99,15 @@ bash scripts/doctor.sh
 
 ### 첫 동작 확인
 
-`src/main.cpp` 는 **빈 뼈대**입니다. 그대로 업로드하면 빌드와 업로드는 성공하지만
-보드에서는 아무 일도 일어나지 않습니다. **정상입니다.**
-
-동작까지 확인하려면 `examples/00_env_check.cpp` 의 내용을 `src/main.cpp` 에
-덮어쓰고 업로드하세요. 다음 세 가지가 모두 되어야 합니다.
+기본 차시(`w01_led`)는 LED/스위치 실습 코드입니다. 환경 점검만 하려면
+`examples/00_env_check.cpp` 의 내용을 `src/w01_led/main.cpp` 에 잠시 덮어쓰고
+업로드하세요. 다음 세 가지가 모두 되어야 합니다.
 
 1. `L` LED 가 1초 주기로 점멸 → 업로드 성공
 2. 시리얼 모니터에 `[tick N] uptime = N s` 출력 → 수신 정상
 3. 모니터에 글자 입력 + Enter → 그대로 되돌아옴 → 송신 정상
 
-확인이 끝나면 `src/main.cpp` 를 다시 비우고 실습 코드를 작성합니다.
+확인이 끝나면 `git checkout src/w01_led/main.cpp` 로 실습 코드를 되돌립니다.
 
 ---
 
@@ -114,8 +116,9 @@ bash scripts/doctor.sh
 ```
 mc2026/
 ├── platformio.ini      ← 툴체인 버전이 고정된 핵심 파일. 함부로 고치지 말 것
-├── src/                ← 실습 코드를 작성하는 곳. 여기만 컴파일됨
-│   └── main.cpp        ← setup()/loop() 은 src 전체에 딱 한 벌만
+├── src/                ← 차시별 실습 코드. 폴더 하나 = 차시 하나
+│   ├── w01_led/main.cpp   ← 1차시 (LED / 스위치)
+│   └── w02_xxx/main.cpp   ← 새 차시는 폴더째 추가
 ├── examples/           ← 참고용 예제. 컴파일되지 않음
 ├── include/            ← 공용 헤더(.h)
 ├── lib/                ← 직접 만든 라이브러리
@@ -124,6 +127,21 @@ mc2026/
 ├── docs/               ← 설치 안내 / 문제 해결
 └── .pio/               ← 빌드 산출물. 자동 생성되며 git 에 올라가지 않음
 ```
+
+### 차시 추가하기
+
+1. `src/w02_xxx/main.cpp` 를 만들고 `setup()` / `loop()` 를 작성합니다.
+2. `platformio.ini` 맨 아래에 같은 이름으로 환경을 등록합니다.
+   ```ini
+   [env:w02_xxx]
+   build_src_filter = +<w02_xxx/>
+   ```
+3. VS Code 하단 상태 표시줄에서 `env:w02_xxx` 를 고르고 빌드/업로드합니다.
+   (`default_envs` 를 바꿔 두면 `Default` 일 때 그 차시가 올라갑니다.)
+
+- 폴더 이름 = 환경 이름 = 필터 이름이어야 합니다. 이름은 `w` + 두 자리 숫자 + `_` + 영문 주제 (예: `w03_button`).
+- `src/` 바로 아래에 `main.cpp` 를 두면 모든 차시와 겹쳐 `multiple definition` 오류가 납니다.
+- `[env:uno]` 는 설치 점검(`doctor`)이 쓰므로 지우거나 다른 차시를 덧붙이지 마세요.
 
 ---
 
