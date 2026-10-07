@@ -31,24 +31,31 @@ void led_shift(int cnt, int ms) {
       led_write(0x01 << b);
       delay(ms);
     }
-    for (int b = 6; b >= 0; b--) {
+    for (int b = 6; b >= 1; b--) {
       led_write(0x01 << b);
       delay(ms);
     }
   }
-
+  led_write(0x01);
+  delay(ms);
   prev_sw = sw_read();
 }
 
 void led_cross(int cnt) {
   byte left = 0x01;
   byte right = 0x80;
-  for (int i = 0; i < cnt * LED_COUNT; i++) {
-    led_write(right | left);
-    delay(300);
-    left = (left << 1) | ((left & 0x80) >> 7);
-    right = (right >> 1) | ((right & 0x01) << 7);
+  for (int c = 0; c < cnt; c++) {
+    for (int i = 0; i < 4; i++) {
+      led_write((right >> i) | (left << i));
+      delay(100);
+    }
+    for (int i = 2; i >= 1; i--) {
+      led_write((right >> i) | (left << i));
+      delay(100);
+    }
   }
+  led_write((right) | (left));
+  delay(100);
 }
 
 byte sw_read() {
@@ -82,7 +89,7 @@ void setup() {
 void loop() {
   byte pressed = sw_pressed();
   if (pressed & 0x01) {
-    led_shift(2, 300);
+    led_shift(2, 100);
     led_write(ALL_OFF);
   } else if (pressed & 0x02) {
     led_alternating(0x55, 2, 300);
