@@ -14,91 +14,135 @@ void led_write(byte value) {
   }
 }
 
-void led_alternating(byte pattern, int cnt, int ms) {
-  for (int i = 0; i < cnt; i++) {
-    led_write(pattern);
-    delay(ms);
-    led_write(~pattern);
-    delay(ms);
+byte frame_shift(int s) {
+  int i = s;
+  if (s >= 8) {
+    i = 14 - s;
   }
-}
-byte sw_read();
-byte prev_sw = 0;
-
-void led_shift(int cnt, int ms) {
-  for (int i = 0; i < cnt; i++) {
-    for (int b = 0; b < 8; b++) {
-      led_write(0x01 << b);
-      delay(ms);
-    }
-    for (int b = 6; b >= 1; b--) {
-      led_write(0x01 << b);
-      delay(ms);
-    }
-  }
-  led_write(0x01);
-  delay(ms);
-  prev_sw = sw_read();
-}
-void led_all_on_off(int cnt, int ms) {
-  for (int i = 0; i < cnt; i++) {
-    led_write(ALL_ON);
-    delay(ms);
-    led_write(ALL_OFF);
-    delay(ms);
-  }
-}
-void led_cross(int cnt) {
-  byte left = 0x01;
-  byte right = 0x80;
-  for (int c = 0; c < cnt; c++) {
-    for (int i = 0; i < 4; i++) {
-      led_write((right >> i) | (left << i));
-      delay(100);
-    }
-    for (int i = 2; i >= 1; i--) {
-      led_write((right >> i) | (left << i));
-      delay(100);
-    }
-  }
-  led_write((right) | (left));
-  delay(100);
+  return 1 << i;
 }
 
-byte sw_read() {
-  byte value = 0;
-  for (int i = 0; i < SW_COUNT; i++) {
-    if (digitalRead(FIRST_SW + i) == LOW) {
-      value = value | (1 << i);
-    }
+byte frame_alt(int s, byte pattern) {
+  if (s % 2 == 0) {
+    return pattern;
   }
-  return value;
+  return ~pattern;
 }
-byte sw_pressed() {
-  byte now = sw_read();
-  byte edge = now & ~prev_sw;
 
-  prev_sw = now;
-  return edge;
+byte frame_cross(int s) {
+  int n = s % 6;
+  int i = n;
+  if (n >= 4) {
+    i = 6 - n;
+  }
+  return (1 << i) | (1 << (LED_COUNT - 1 - i));
 }
+
+const byte TASK_DEFAULT = 0;
+const byte TASK_SHIFT = 1;
+const byte TASK_ALT = 2;
+const byte TASK_CROSS = 3;
+
+const int SHIFT_STEPS = 14 * 2 + 1;
+const int ALT_STEPS = 2 * 2;
+const int CROSS_STEPS = 6 * 2 + 1;
+const int DEFAULT_STEPS = 2;
 
 volatile byte sw_event = 0;
+volatile byte prev_pb = 0;
 volatile unsigned long last_press = 0;
 
-void isr_sw1() {
+ISR(PCINT0_vect) {
+  byte now = PINB & 0x1C;
+  byte fell = prev_pb & ~now; // HIGH -> LOW 로 바뀐 핀 = 눌린 스위치
+  prev_pb = now;
+
+  if (fell == 0) {
+    return; // 뗄 때 생기는 변화는 무시
+  }
   if (millis() - last_press < 200) {
     return;
-  } // 채터링 무시​
+  } // 채터링 무시
   last_press = millis();
-  sw_event = sw_event | 0x01;
+
+  if (fell & 0x04) {
+    sw_event |= 0x01;
+  }
+  if (fell & 0x08) {
+    sw_event |= 0x02;
+  }
+  if (fell & 0x10) {
+    sw_event |= 0x04;
+  }
 }
 
-void isr_sw2() {
-  if (millis() - last_press < 200) {
+byte task = TASK_DEFAULT;
+int step = 0;
+int interval = 500;
+
+unsigned long last_frame = 0;
+
+void draw_frame() {
+  if (task == TASK_SHIFT) {
+    led_write(frame_shift(step));
+  } else if (task == TASK_ALT) {
+    led_write(frame_alt(step, 0xC3));
+  } else if (task == TASK_CROSS) {
+    led_write(frame_cross(step));
+  } else {
+    led_write(frame_alt(step, ALL_ON));
+  }
+}
+
+bool task_finished() {
+
+  if (task == TASK_SHIFT) {
+    return step >= SHIFT_STEPS;
+  } else if (task == TASK_ALT) {
+    return step >= SHIFT_STEPS;
+  } else if (task == TASK_CROSS) {
+    return step >= SHIFT_STEPS;
+  }
+
+  return false;
+}
+
+const int STACK_MAX = 4;
+
+byte stack_task[STACK_MAX];
+int stack_step[STACK_MAX];
+int stack_interval[STACK_MAX];
+int stack_left[STACK_MAX];
+int stack_top = 0;
+
+void push_task() {
+  if (stack_top >= STACK_MAX) {
     return;
   }
-  last_press = millis();
-  sw_event = sw_event | 0x02;
+
+  unsigned long used = millis() - last_frame;
+  int left = interval - (int)used;
+  if (left < 0) {
+    left = 0;
+  }
+
+  stack_task[stack_top] = task;
+  stack_step[stack_top] = step;
+  stack_interval[stack_top] = interval;
+  stack_left[stack_top] = left;
+  stack_top = stack_top + 1;
+}
+
+void restore_task() {
+  int left;
+
+  if (stack_top < 0) {
+    stack_top = stack_top - 1;
+    task = stack_task[stack_top];
+    step = stack_step[stack_top];
+    interval = stack_interval[stack_top];
+    left = stack_left[stack_top];
+  }
 }
 
 void setup() {
@@ -109,9 +153,11 @@ void setup() {
   for (int i = 0; i < SW_COUNT; i++) {
     pinMode(FIRST_SW + i, INPUT_PULLUP);
   }
-  attachInterrupt(digitalPinToInterrupt(FIRST_SW), isr_sw1, FALLING);
-  attachInterrupt(digitalPinToInterrupt(FIRST_SW + 1), isr_sw2, FALLING);
-  led_write(ALL_OFF);
+  PCICR = PCICR | (1 << PCIE0);
+  PCMSK0 = PCMSK0 | (1 << PCINT2) | (1 << PCINT3) | (1 << PCINT4);
+
+  draw_frame();
+  last_frame = millis();
 }
 
 void loop() {
@@ -124,22 +170,38 @@ void loop() {
   sw_event = 0;
 
   interrupts();
+  if (event != 0) {
+    push_task();
+    if (event & 0x01) {
+      task = TASK_SHIFT;
+      interval = 80;
+    }
 
-  if (event & 0x01) { // SW1​
+    if (event & 0x02) {
+      task = TASK_ALT;
+      interval = 300;
+    }
 
-    led_shift(2, 80);
-
-    led_write(ALL_OFF);
+    if (event & 0x04) {
+      task = TASK_CROSS;
+      interval = 150;
+    }
+    step = 0;
+    draw_frame();
+    last_frame = millis();
+    return;
   }
 
-  if (event & 0x02) { // SW2​
-
-    led_alternating(0xAA, 2, 300);
-
-    led_write(ALL_OFF);
+  if (millis() - last_frame >= (unsigned long)interval) {
+    step = (step + 1);
+    if (task == TASK_DEFAULT && step >= DEFAULT_STEPS) {
+      step = 0;
+    }
+    if (task_finished()) {
+      restore_task();
+      return;
+    }
+    draw_frame();
+    last_frame = millis();
   }
-
-  // 기본 동작 : 전체 점멸​
-
-  led_all_on_off(1, 500);
 }
