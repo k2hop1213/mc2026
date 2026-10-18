@@ -123,16 +123,23 @@ void push_task() {
 }
 
 void restore_task() {
+  int left;
   if (stack_top > 0) {
     stack_top = stack_top - 1;
     task = stack_task[stack_top];
     step = stack_step[stack_top];
     interval = stack_interval[stack_top];
-    int left = stack_left[stack_top];
+    left = stack_left[stack_top];
 
-    draw_frame();
-    last_frame = millis() - (interval - left); // 남은 시간만큼 기다린 뒤 다음 프레임
+  } else {
+    task = TASK_DEFAULT;
+    step = 0;
+    interval = 500;
+    left = interval;
   }
+
+  draw_frame();
+  last_frame = millis() - (interval - left); // 남은 시간만큼 기다린 뒤 다음 프레임
 }
 
 // =============================================================
