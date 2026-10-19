@@ -100,14 +100,14 @@ bash scripts/doctor.sh
 ### 첫 동작 확인
 
 기본 차시(`w01_led`)는 LED/스위치 실습 코드입니다. 환경 점검만 하려면
-`examples/00_env_check.cpp` 의 내용을 `src/w01_led/main.cpp` 에 잠시 덮어쓰고
+`examples/00_env_check.cpp` 의 내용을 `src/w01_led/01_led/main.cpp` 에 잠시 덮어쓰고
 업로드하세요. 다음 세 가지가 모두 되어야 합니다.
 
 1. `L` LED 가 1초 주기로 점멸 → 업로드 성공
 2. 시리얼 모니터에 `[tick N] uptime = N s` 출력 → 수신 정상
 3. 모니터에 글자 입력 + Enter → 그대로 되돌아옴 → 송신 정상
 
-확인이 끝나면 `git checkout src/w01_led/main.cpp` 로 실습 코드를 되돌립니다.
+확인이 끝나면 `git checkout src/w01_led/01_led/main.cpp` 로 실습 코드를 되돌립니다.
 
 ---
 
@@ -116,9 +116,17 @@ bash scripts/doctor.sh
 ```
 mc2026/
 ├── platformio.ini      ← 툴체인 버전이 고정된 핵심 파일. 함부로 고치지 말 것
-├── src/                ← 차시별 실습 코드. 폴더 하나 = 차시 하나
-│   ├── w01_led/main.cpp   ← 1차시 (LED / 스위치)
-│   └── w02_xxx/main.cpp   ← 새 차시는 폴더째 추가
+├── src/                ← 차시별 실습 코드. 주차 폴더 아래에 실습 하나 = 폴더 하나
+│   ├── w01_led/
+│   │   ├── 01_led/main.cpp         ← 1주차 실습 (LED / 스위치)
+│   │   └── assignment/main.cpp     ← 1주차 과제
+│   ├── w02_interrupt/
+│   │   ├── 01_interrupt/main.cpp   ← 2주차 실습 (인터럽트)
+│   │   └── assignment/main.cpp     ← 2주차 과제
+│   └── w03_uart/
+│       ├── 01_tx_char/main.cpp     ← 3주차 실습 (UART)
+│       ├── ...
+│       └── 05_protocol/main.cpp
 ├── examples/           ← 참고용 예제. 컴파일되지 않음
 ├── include/            ← 공용 헤더(.h)
 ├── lib/                ← 직접 만든 라이브러리
@@ -130,17 +138,19 @@ mc2026/
 
 ### 차시 추가하기
 
-1. `src/w02_xxx/main.cpp` 를 만들고 `setup()` / `loop()` 를 작성합니다.
-2. `platformio.ini` 맨 아래에 같은 이름으로 환경을 등록합니다.
+1. 주차 폴더 아래에 `src/w04_xxx/01_yyy/main.cpp` 를 만들고 `setup()` / `loop()` 를 작성합니다.
+   과제는 같은 주차 폴더의 `assignment/` 에 둡니다.
+2. `platformio.ini` 맨 아래에 환경을 등록합니다. 필터에는 실습 폴더까지 적습니다.
    ```ini
-   [env:w02_xxx]
-   build_src_filter = +<w02_xxx/>
+   [env:w04_yyy]
+   build_src_filter = +<w04_xxx/01_yyy/>
    ```
-3. VS Code 하단 상태 표시줄에서 `env:w02_xxx` 를 고르고 빌드/업로드합니다.
+3. VS Code 하단 상태 표시줄에서 `env:w04_yyy` 를 고르고 빌드/업로드합니다.
    (`default_envs` 를 바꿔 두면 `Default` 일 때 그 차시가 올라갑니다.)
 
-- 폴더 이름 = 환경 이름 = 필터 이름이어야 합니다. 이름은 `w` + 두 자리 숫자 + `_` + 영문 주제 (예: `w03_button`).
-- `src/` 바로 아래에 `main.cpp` 를 두면 모든 차시와 겹쳐 `multiple definition` 오류가 납니다.
+- 주차 폴더 이름은 `w` + 두 자리 숫자 + `_` + 영문 소문자 주제 (예: `w03_uart`), 환경 이름도 `w` + 두 자리 숫자로 시작합니다.
+- 필터는 반드시 `main.cpp` 가 들어 있는 실습 폴더 하나만 가리켜야 합니다. 주차 폴더(`+<w03_uart/>`)를 통째로 넣거나
+  `src/` · 주차 폴더 바로 아래에 `main.cpp` 를 두면 실습끼리 겹쳐 `multiple definition` 오류가 납니다.
 - `[env:uno]` 는 설치 점검(`doctor`)이 쓰므로 지우거나 다른 차시를 덧붙이지 마세요.
 
 ---
