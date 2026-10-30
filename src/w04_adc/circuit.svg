@@ -1,0 +1,205 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     viewBox="0 0 1000 680" width="1000" height="680"
+     font-family="Arial, Helvetica, sans-serif" font-size="13">
+  <!--
+    5차시 ADC 실습 회로 (3주차 보드 + 가변저항 A1 + 조도센서 A3)
+    LED  : 5V ─ 220Ω ─ LED ─ D2~D9   (Active Low)
+    SW   : D10~D12 ─ 스위치 ─ GND    (INPUT_PULLUP)
+    가변저항 : GND ─ 10kΩ ─ 5V,  가운데 다리 ─ A1
+    조도센서 : 5V ─ GL5528 ─ A3 ─ 10kΩ ─ GND   (밝을수록 값이 큼)
+  -->
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#000"/>
+    </marker>
+
+    <!-- LED(Active Low) + 220Ω : x 800 ~ 980, y = 0 기준 -->
+    <g id="ledr" stroke="#000" stroke-width="1.6" fill="none">
+      <line x1="800" y1="-9" x2="800" y2="9"/>
+      <polygon points="800,0 818,-9 818,9" fill="#fff"/>
+      <line x1="806" y1="-12" x2="798" y2="-24" marker-end="url(#ah)"/>
+      <line x1="814" y1="-12" x2="806" y2="-24" marker-end="url(#ah)"/>
+      <line x1="818" y1="0" x2="870" y2="0"/>
+      <rect x="870" y="-7" width="60" height="14" fill="#fff"/>
+      <line x1="930" y1="0" x2="980" y2="0"/>
+      <text x="900" y="-12" text-anchor="middle" stroke="none" fill="#000">220 Ω</text>
+    </g>
+
+    <!-- 택트 스위치 : x 720 ~ 820, y = 0 기준 -->
+    <g id="sw" stroke="#000" stroke-width="1.6" fill="none">
+      <circle cx="725" cy="0" r="4" fill="#fff"/>
+      <circle cx="775" cy="0" r="4" fill="#fff"/>
+      <line x1="720" y1="-10" x2="780" y2="-10"/>
+      <line x1="750" y1="-10" x2="750" y2="-20"/>
+      <line x1="740" y1="-20" x2="760" y2="-20"/>
+      <line x1="779" y1="0" x2="820" y2="0"/>
+    </g>
+  </defs>
+
+  <rect width="1000" height="680" fill="#fff"/>
+
+  <!-- ===== Arduino UNO R3 ===== -->
+  <g stroke="#000" stroke-width="1.6" fill="none">
+    <rect x="300" y="120" width="240" height="390" fill="#fff"/>
+    <circle cx="405" cy="145" r="9"/>
+    <circle cx="425" cy="145" r="9"/>
+    <line x1="400" y1="145" x2="410" y2="145"/>
+    <line x1="420" y1="145" x2="430" y2="145"/>
+    <line x1="425" y1="140" x2="425" y2="150"/>
+
+    <!-- 왼쪽 핀 -->
+    <line x1="288" y1="230" x2="300" y2="230"/>
+    <line x1="288" y1="250" x2="300" y2="250"/>
+    <line x1="288" y1="270" x2="300" y2="270"/>
+    <line x1="288" y1="290" x2="300" y2="290"/>
+    <line x1="288" y1="310" x2="300" y2="310"/>
+    <line x1="288" y1="330" x2="300" y2="330"/>
+    <line x1="288" y1="350" x2="300" y2="350"/>
+    <line x1="288" y1="390" x2="300" y2="390"/>
+    <line x1="288" y1="410" x2="300" y2="410"/>
+    <line x1="288" y1="430" x2="300" y2="430"/>
+    <line x1="288" y1="450" x2="300" y2="450"/>
+    <line x1="288" y1="470" x2="300" y2="470"/>
+    <line x1="288" y1="490" x2="300" y2="490"/>
+
+    <!-- 오른쪽 핀 -->
+    <line x1="540" y1="170" x2="552" y2="170"/>
+    <line x1="540" y1="190" x2="552" y2="190"/>
+    <line x1="540" y1="210" x2="552" y2="210"/>
+    <line x1="540" y1="230" x2="552" y2="230"/>
+    <line x1="540" y1="250" x2="552" y2="250"/>
+    <line x1="540" y1="270" x2="552" y2="270"/>
+    <line x1="540" y1="290" x2="552" y2="290"/>
+    <line x1="540" y1="310" x2="552" y2="310"/>
+    <line x1="540" y1="350" x2="552" y2="350"/>
+    <line x1="540" y1="370" x2="552" y2="370"/>
+    <line x1="540" y1="390" x2="552" y2="390"/>
+    <line x1="540" y1="410" x2="552" y2="410"/>
+    <line x1="540" y1="430" x2="552" y2="430"/>
+    <line x1="540" y1="450" x2="552" y2="450"/>
+    <line x1="540" y1="470" x2="552" y2="470"/>
+    <line x1="540" y1="490" x2="552" y2="490"/>
+  </g>
+
+  <g fill="#000">
+    <text x="415" y="172" text-anchor="middle">ARDUINO</text>
+    <text x="415" y="187" text-anchor="middle">UNO r3</text>
+
+    <text x="306" y="234">IOREF</text>
+    <text x="306" y="254">RESET</text>
+    <text x="306" y="274">3.3V</text>
+    <text x="306" y="294">5V</text>
+    <text x="306" y="314">GND</text>
+    <text x="306" y="334">GND</text>
+    <text x="306" y="354">Vin</text>
+    <text x="306" y="394">A0</text>
+    <text x="306" y="414">A1</text>
+    <text x="306" y="434">A2</text>
+    <text x="306" y="454">A3</text>
+    <text x="306" y="474">A4</text>
+    <text x="306" y="494">A5</text>
+  </g>
+  <g fill="#000" text-anchor="end">
+    <text x="534" y="174">AREF</text>
+    <text x="534" y="194">GND</text>
+    <text x="534" y="214">D13</text>
+    <text x="534" y="234">D12</text>
+    <text x="534" y="254">PWM D11</text>
+    <text x="534" y="274">PWM D10</text>
+    <text x="534" y="294">PWM D9</text>
+    <text x="534" y="314">D8</text>
+    <text x="534" y="354">D7</text>
+    <text x="534" y="374">PWM D6</text>
+    <text x="534" y="394">PWM D5</text>
+    <text x="534" y="414">D4</text>
+    <text x="534" y="434">PWM D3</text>
+    <text x="534" y="454">D2</text>
+    <text x="534" y="474">TX D1</text>
+    <text x="534" y="494">RX D0</text>
+  </g>
+
+  <g stroke="#000" stroke-width="1.6" fill="none">
+    <!-- ===== 전원 레일 ===== -->
+    <!-- 5V : 위로 돌아 LED 쪽 세로 버스(x=980), 아래로는 센서 쪽 -->
+    <polyline points="288,290 30,290 30,30 980,30 980,585"/>
+    <polyline points="30,290 30,640 230,640"/>
+    <!-- GND : 위로 돌아 스위치 쪽 세로 버스(x=820) -->
+    <polyline points="288,310 55,310 55,55 820,55 820,180"/>
+    <!-- GND (두 번째 핀) : 센서 쪽 -->
+    <polyline points="288,330 80,330 80,370 230,370"/>
+
+    <!-- ===== 스위치 D12, D11, D10 → GND ===== -->
+    <polyline points="552,230 580,230 580,100 721,100"/>
+    <polyline points="552,250 600,250 600,140 721,140"/>
+    <polyline points="552,270 620,270 620,180 721,180"/>
+
+    <!-- ===== LED 배선 D9 ~ D2 (계단식) ===== -->
+    <polyline points="552,290 750,290 750,340 800,340"/>
+    <polyline points="552,310 730,310 730,375 800,375"/>
+    <polyline points="552,350 710,350 710,410 800,410"/>
+    <polyline points="552,370 690,370 690,445 800,445"/>
+    <polyline points="552,390 670,390 670,480 800,480"/>
+    <polyline points="552,410 650,410 650,515 800,515"/>
+    <polyline points="552,430 630,430 630,550 800,550"/>
+    <polyline points="552,450 610,450 610,585 800,585"/>
+
+    <!-- ===== 조도센서 전압 분배 (x=150) : GND ─ 10kΩ ─ A3 ─ GL5528 ─ 5V ===== -->
+    <line x1="150" y1="370" x2="150" y2="385"/>
+    <rect x="142" y="385" width="16" height="45" fill="#fff"/>
+    <line x1="150" y1="430" x2="150" y2="470"/>
+    <rect x="142" y="470" width="16" height="60" fill="#fff"/>
+    <line x1="150" y1="530" x2="150" y2="640"/>
+    <line x1="104" y1="462" x2="136" y2="482" marker-end="url(#ah)"/>
+    <line x1="104" y1="484" x2="136" y2="504" marker-end="url(#ah)"/>
+    <!-- A3 선 : 가변저항 선을 넘어갈 때 반원으로 건너뜀 (연결 아님) -->
+    <path d="M150,450 H222 A8,8 0 0 1 238,450 H288"/>
+
+    <!-- ===== 가변저항 (x=230) : GND ─ 10kΩ ─ 5V, 가운데 다리 → A1 ===== -->
+    <line x1="230" y1="370" x2="230" y2="385"/>
+    <rect x="222" y="385" width="16" height="50" fill="#fff"/>
+    <line x1="230" y1="435" x2="230" y2="640"/>
+    <line x1="288" y1="410" x2="246" y2="410"/>
+  </g>
+  <polygon points="238,410 248,404 248,416" fill="#000"/>
+
+  <!-- 스위치, LED 부품 -->
+  <use xlink:href="#sw" href="#sw" y="100"/>
+  <use xlink:href="#sw" href="#sw" y="140"/>
+  <use xlink:href="#sw" href="#sw" y="180"/>
+
+  <use xlink:href="#ledr" href="#ledr" y="340"/>
+  <use xlink:href="#ledr" href="#ledr" y="375"/>
+  <use xlink:href="#ledr" href="#ledr" y="410"/>
+  <use xlink:href="#ledr" href="#ledr" y="445"/>
+  <use xlink:href="#ledr" href="#ledr" y="480"/>
+  <use xlink:href="#ledr" href="#ledr" y="515"/>
+  <use xlink:href="#ledr" href="#ledr" y="550"/>
+  <use xlink:href="#ledr" href="#ledr" y="585"/>
+
+  <!-- 접점 -->
+  <g fill="#000">
+    <circle cx="30" cy="290" r="3.5"/>
+    <circle cx="150" cy="640" r="3.5"/>
+    <circle cx="150" cy="370" r="3.5"/>
+    <circle cx="150" cy="450" r="3.5"/>
+    <circle cx="820" cy="100" r="3.5"/>
+    <circle cx="820" cy="140" r="3.5"/>
+    <circle cx="820" cy="180" r="3.5"/>
+    <circle cx="980" cy="340" r="3.5"/>
+    <circle cx="980" cy="375" r="3.5"/>
+    <circle cx="980" cy="410" r="3.5"/>
+    <circle cx="980" cy="445" r="3.5"/>
+    <circle cx="980" cy="480" r="3.5"/>
+    <circle cx="980" cy="515" r="3.5"/>
+    <circle cx="980" cy="550" r="3.5"/>
+    <circle cx="980" cy="585" r="3.5"/>
+  </g>
+
+  <!-- 부품 이름 -->
+  <g fill="#000">
+    <text x="136" y="412" text-anchor="end">10 kΩ</text>
+    <text x="136" y="550" text-anchor="end">GL5528</text>
+    <text x="214" y="404" text-anchor="end">10 kΩ</text>
+    <text x="214" y="420" text-anchor="end" font-size="11">가변</text>
+  </g>
+</svg>
