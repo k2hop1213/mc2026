@@ -23,7 +23,7 @@ const int FIRST_PIN = 2; // LED : D2 ~ D9   (Active Low)
 const int LED_COUNT = 8;
 
 const int CDS_PIN = A3;     // PC3 - ADC3
-const int THRESHOLD = 400;  // 이보다 작으면 어둡다고 본다
+const int THRESHOLD = 650;  // 이보다 작으면 어둡다고 본다
 
 const byte ALL_ON = 0xFF;
 const byte ALL_OFF = 0x00;
