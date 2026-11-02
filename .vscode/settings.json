@@ -24,6 +24,9 @@
     "*.tpp": "cpp"
   },
 
+  // ---- Python 도구(scripts/) : pyserial 이 들어 있는 PlatformIO 의 Python 사용 ----
+  "python.defaultInterpreterPath": "${userHome}/.platformio/penv/Scripts/python.exe",
+
   // ---- PlatformIO ----
   // 번들 PIO Core 사용 = 학생 PC의 시스템 Python 상태와 무관하게 동작
   "platformio-ide.useBuiltinPIOCore": true,
