@@ -23,6 +23,7 @@
 #include <EEPROM.h>
 
 const long BAUD = 9600; // 조교 프로그램 설정과 맞출 것
+const byte SERIAL_FRAME = SERIAL_8N1; // SERIAL_8E1, SERIAL_8O1, SERIAL_8N2 ...
 
 const int FIRST_PIN = 2; // LED : D2 ~ D9   (Active Low)
 const int LED_COUNT = 8;
@@ -151,7 +152,7 @@ void setup() {
     log_count = 0; // 처음 쓰는 EEPROM 은 0xFFFF 로 차 있다
   }
 
-  Serial.begin(BAUD);
+  Serial.begin(BAUD, SERIAL_FRAME);
 }
 
 void loop() {

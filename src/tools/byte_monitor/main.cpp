@@ -28,6 +28,7 @@ const int FIRST_PIN = 2; // LED : D2 ~ D9   (Active Low)
 const int LED_COUNT = 8;
 
 const long BAUD = 9600;     // 조교 프로그램 설정과 맞출 것
+const byte SERIAL_FRAME = SERIAL_8N1; // SERIAL_8E1, SERIAL_8O1, SERIAL_8N2 ...
 const bool ECHO_HEX = true; // 받은 바이트를 16진수로 되돌려 보낼지
 
 const int SHOW_MS = 600; // 바이트 하나를 보여 주는 시간
@@ -112,7 +113,7 @@ void setup() {
   delay(300);
   led_write(0x00);
 
-  Serial.begin(BAUD);
+  Serial.begin(BAUD, SERIAL_FRAME);
 }
 
 void loop() {

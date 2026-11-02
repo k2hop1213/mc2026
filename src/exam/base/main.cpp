@@ -2,11 +2,12 @@
   시험용 통합 틀
 
   시험 때 고치는 곳
-    1. 패킷 형식     : "패킷 형식" 상수   (BAUD, STX, ETX, USE_LEN, USE_SUM, USE_ETX, SUM_XOR)
-    2. 명령 번호     : "명령" 상수와 COMMANDS 표
-    3. 응답 형식     : send_ack, send_error, send_adc, send_sw_events
-    4. 명령별 동작   : run_command
-    5. 핀            : "핀" 상수. LED 를 옮기면 ISR(TIMER1_COMPA_vect) 도 고친다
+    1. 패킷 형식     : "패킷 형식" 상수   (BAUD, SERIAL_FRAME, STX, ETX, USE_LEN, USE_SUM, USE_ETX, SUM_XOR)
+    2. 송신과 진단   : "송신과 진단" 상수 (SEND_ACK, SEND_ERROR, DEBUG_LED)
+    3. 명령 번호     : "명령" 상수와 COMMANDS 표
+    4. 응답 형식     : send_ack, send_error, send_adc, send_sw_events
+    5. 명령별 동작   : run_command
+    6. 핀            : "핀" 상수. LED 를 옮기면 ISR(TIMER1_COMPA_vect) 도 고친다
 
   패킷 :  | STX(0x02) | CMD | LEN | DATA x LEN | SUM | ETX(0x03) |
   SUM = CMD + LEN + DATA 의 하위 8비트      ** 시험 사양이 아니라 연습용 가정이다 **
@@ -52,12 +53,18 @@
 
 // ── 패킷 형식 ──────────────────────────────────────
 const long BAUD = 9600;
+const byte SERIAL_FRAME = SERIAL_8N1; // SERIAL_8E1, SERIAL_8O1, SERIAL_8N2 ...
 const byte STX = 0x02;
 const byte ETX = 0x03;
 const bool USE_LEN = true;  // false 면 COMMANDS 표의 길이로 받는다
 const bool USE_SUM = true;
 const bool USE_ETX = true;
 const bool SUM_XOR = false; // true 면 더하기 대신 XOR
+
+// ── 송신과 진단 ─────────────────────────────────────
+const bool SEND_ACK = true;   // false 면 성공 응답을 보내지 않는다
+const bool SEND_ERROR = true; // false 면 오류 응답을 보내지 않는다. 패킷은 똑같이 버린다
+const bool DEBUG_LED = false; // true 면 LED 에 CMD, 오류는 0x80 | 오류 번호만 표시한다
 
 // ── 명령 ───────────────────────────────────────────
 const byte CMD_BLINK = 0x01;
@@ -98,7 +105,7 @@ const byte ERR_CMD = 5;
 const byte ERR_DATA_LEN = 6;
 const byte ERR_CHANNEL = 7;
 
-const int MAX_DATA = 8;               // DATA 버퍼 크기
+const int MAX_DATA = 16;              // DATA 버퍼 크기
 const unsigned long RX_TIMEOUT = 100; // 패킷 도중 기다리는 시간 (ms)
 
 // ── 핀 ─────────────────────────────────────────────
@@ -112,6 +119,9 @@ const int BUZZER_PIN = A0; // 부저
 const int SW1_PIN = 10; // PB2 - PCINT2
 const int SW2_PIN = 11; // PB3 - PCINT3
 const int SW3_PIN = 12; // PB4 - PCINT4
+
+const byte SW_COUNT = 3;
+const unsigned long SW_DEBOUNCE_MS = 50;
 
 const byte ALL_ON = 0xFF;
 const byte ALL_OFF = 0x00;
@@ -144,26 +154,41 @@ void led_timer_init() {
 
 // 비트를 LED 로 내보낸다.  bit0 = D2
 void led_write(byte value) {
-  led_value = value;
+  if (!DEBUG_LED) {
+    led_value = value;
+  }
+}
+
+// DEBUG_LED 일 때만 LED 에 진단 값을 표시한다
+void debug_show(byte value) {
+  if (DEBUG_LED) {
+    led_value = value;
+  }
 }
 
 // ── 스위치 : 핀 변화 인터럽트 ─────────────────────────
 volatile byte sw_event = 0;
-volatile unsigned long last_press = 0;
+volatile unsigned long sw_edge[SW_COUNT]; // 스위치별 마지막 엣지 시각
 volatile byte prev_pb = 0x1C; // PB2, PB3, PB4
 
+// 누를 때와 뗄 때 모두 일정 시간 안의 엣지를 무시한다.
+// 떨어지는 엣지만 재면 뗄 때 튄 신호가 새 입력으로 들어온다.
 ISR(PCINT0_vect) {
   byte now = PINB & 0x1C;
-  byte fell = prev_pb & ~now; // 1 -> 0 으로 떨어진 비트 = 눌린 것
-  prev_pb = now;
 
-  if (fell == 0) { return; }                   // 뗄 때는 무시
-  if (millis() - last_press < 200) { return; } // 채터링 무시
-  last_press = millis();
+  for (byte i = 0; i < SW_COUNT; i++) {
+    byte mask = 0x04 << i;
 
-  if (fell & 0x04) { sw_event = sw_event | 0x01; } // SW1
-  if (fell & 0x08) { sw_event = sw_event | 0x02; } // SW2
-  if (fell & 0x10) { sw_event = sw_event | 0x04; } // SW3
+    if (((now ^ prev_pb) & mask) == 0) { continue; }         // 이 스위치는 안 바뀜
+    if (millis() - sw_edge[i] < SW_DEBOUNCE_MS) { continue; } // 채터링 무시
+
+    sw_edge[i] = millis();
+    prev_pb ^= mask;
+
+    if ((now & mask) == 0) { // 1 -> 0 으로 떨어진 것 = 눌린 것
+      sw_event |= (1 << i);
+    }
+  }
 }
 
 // ── 보내기 ─────────────────────────────────────────
@@ -197,11 +222,17 @@ void send_packet(byte cmd, const byte *payload, byte len) {
 }
 
 void send_ack(byte cmd) {
-  send_packet(cmd | ACK_FLAG, NULL, 0);
+  if (SEND_ACK) {
+    send_packet(cmd | ACK_FLAG, NULL, 0);
+  }
 }
 
 void send_error(byte code) {
-  send_packet(CMD_ERROR, &code, 1);
+  debug_show(0x80 | code);
+
+  if (SEND_ERROR) {
+    send_packet(CMD_ERROR, &code, 1);
+  }
 }
 
 // ── 받기 ───────────────────────────────────────────
@@ -227,6 +258,7 @@ int command_len(byte cmd) {
 }
 
 void finish_packet() {
+  debug_show(command);
   ready = true;
   state = WAIT_STX;
 }
@@ -505,7 +537,9 @@ void run_command() {
   } else if (command == CMD_SHIFT) {
     action_start(ACT_SHIFT, SHIFT_MS, data[0] * SHIFT_PERIOD + 1);
   } else if (command == CMD_BRIGHT) {
-    led_level = (data[0] + 1) >> 4; // 0 ~ 255 -> 0 ~ 16
+    if (!DEBUG_LED) {
+      led_level = (data[0] + 1) >> 4; // 0 ~ 255 -> 0 ~ 16
+    }
   } else if (command == CMD_TONE) {
     buzzer_tone((data[0] << 8) | data[1], (data[2] << 8) | data[3]);
   } else if (command == CMD_MELODY) {
@@ -531,7 +565,7 @@ void send_sw_events() {
   sw_event = 0;
   interrupts();
 
-  for (byte i = 0; i < 3; i++) {
+  for (byte i = 0; i < SW_COUNT; i++) {
     if (event & (1 << i)) {
       byte number = i + 1;
       send_packet(CMD_SW_EVENT, &number, 1);
@@ -553,7 +587,7 @@ void setup() {
   PCMSK0 = PCMSK0 | (1 << PCINT2) | (1 << PCINT3) | (1 << PCINT4);
 
   led_timer_init();
-  Serial.begin(BAUD);
+  Serial.begin(BAUD, SERIAL_FRAME);
 }
 
 void loop() {

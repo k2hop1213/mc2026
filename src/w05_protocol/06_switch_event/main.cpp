@@ -45,6 +45,9 @@ const int SW1_PIN = 10; // PB2 - PCINT2
 const int SW2_PIN = 11; // PB3 - PCINT3
 const int SW3_PIN = 12; // PB4 - PCINT4
 
+const byte SW_COUNT = 3;
+const unsigned long SW_DEBOUNCE_MS = 50;
+
 const byte ALL_ON = 0xFF;
 const byte ALL_OFF = 0x00;
 
@@ -60,21 +63,27 @@ void led_write(byte value) {
 
 // ── 스위치 : 핀 변화 인터럽트 ─────────────────────────
 volatile byte sw_event = 0;
-volatile unsigned long last_press = 0;
+volatile unsigned long sw_edge[SW_COUNT]; // 스위치별 마지막 엣지 시각
 volatile byte prev_pb = 0x1C; // PB2, PB3, PB4
 
+// 누를 때와 뗄 때 모두 일정 시간 안의 엣지를 무시한다.
+// 떨어지는 엣지만 재면 뗄 때 튄 신호가 새 입력으로 들어온다.
 ISR(PCINT0_vect) {
   byte now = PINB & 0x1C;
-  byte fell = prev_pb & ~now; // 1 -> 0 으로 떨어진 비트 = 눌린 것
-  prev_pb = now;
 
-  if (fell == 0) { return; }                   // 뗄 때는 무시
-  if (millis() - last_press < 200) { return; } // 채터링 무시
-  last_press = millis();
+  for (byte i = 0; i < SW_COUNT; i++) {
+    byte mask = 0x04 << i;
 
-  if (fell & 0x04) { sw_event = sw_event | 0x01; } // SW1
-  if (fell & 0x08) { sw_event = sw_event | 0x02; } // SW2
-  if (fell & 0x10) { sw_event = sw_event | 0x04; } // SW3
+    if (((now ^ prev_pb) & mask) == 0) { continue; }         // 이 스위치는 안 바뀜
+    if (millis() - sw_edge[i] < SW_DEBOUNCE_MS) { continue; } // 채터링 무시
+
+    sw_edge[i] = millis();
+    prev_pb ^= mask;
+
+    if ((now & mask) == 0) { // 1 -> 0 으로 떨어진 것 = 눌린 것
+      sw_event |= (1 << i);
+    }
+  }
 }
 
 // ── LED 동작 ───────────────────────────────────────

@@ -4,9 +4,11 @@ w05_protocol 의 패킷 형식(STX CMD LEN DATA SUM ETX)으로 올린 보드에
 쓰레기 바이트, 잘린 패킷, 연속 패킷을 보내고 응답을 자동으로 검사한다.
 
 실행 : python scripts/stress_test.py COM5
-보드에는 w05_switch 처럼 ADC 요청(명령 0x05)을 받는 코드가 올라가 있어야 한다.
+옵션 : --baud 9600, --max-data 16 (w05 코드는 --max-data 8)
+보드에는 exam_base, exam_avr, w05_switch 처럼 ADC 요청(명령 0x05)을 받는 코드가 올라가 있어야 한다.
 """
 
+import argparse
 import sys
 import time
 
@@ -45,8 +47,8 @@ def parse(stream):
 
 
 class Board:
-    def __init__(self, name):
-        self.port = serial.Serial(name, 9600, timeout=0.01)
+    def __init__(self, name, baud=9600):
+        self.port = serial.Serial(name, baud, timeout=0.01)
         time.sleep(2.5)  # 포트를 열면 Uno 가 리셋된다
         self.port.reset_input_buffer()
 
@@ -118,14 +120,14 @@ def test_split(board):
     only_adc("한 바이트씩 50ms 간격 전송", board)
 
 
-def test_lengths(board):
-    board.send(build_packet(0x05, bytes(8)))
+def test_lengths(board, max_data):
+    board.send(build_packet(0x05, bytes(max_data)))
     packets = board.receive()
-    check("LEN 8 (버퍼 최대)", packets == errors(ERR_DATA_LEN), str(summary(packets)))
+    check(f"LEN {max_data} (버퍼 최대)", packets == errors(ERR_DATA_LEN), str(summary(packets)))
 
-    board.send(build_packet(0x05, bytes(9)))
+    board.send(build_packet(0x05, bytes(max_data + 1)))
     packets = board.receive()
-    check("LEN 9 (버퍼 초과)", packets == errors(ERR_LEN), str(summary(packets)))
+    check(f"LEN {max_data + 1} (버퍼 초과)", packets == errors(ERR_LEN), str(summary(packets)))
 
     board.send(REQ)
     only_adc("LEN 초과 뒤 복귀", board)
@@ -158,10 +160,13 @@ def test_limits(board):
 
 
 def main():
-    if len(sys.argv) != 2:
-        sys.exit("사용법 : python scripts/stress_test.py COM5")
+    parser = argparse.ArgumentParser(description="프로토콜 파서 스트레스 테스트")
+    parser.add_argument("port", help="예: COM5")
+    parser.add_argument("--baud", type=int, default=9600)
+    parser.add_argument("--max-data", type=int, default=16, help="보드 코드의 MAX_DATA")
+    args = parser.parse_args()
 
-    board = Board(sys.argv[1])
+    board = Board(args.port, args.baud)
 
     board.send(REQ)
     only_adc("정상 요청", board)
@@ -170,7 +175,7 @@ def main():
     test_truncated(board)
     test_corrupted(board)
     test_split(board)
-    test_lengths(board)
+    test_lengths(board, args.max_data)
     test_burst(board)
     test_limits(board)
 

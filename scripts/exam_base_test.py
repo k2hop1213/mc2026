@@ -5,9 +5,11 @@ LED 동작 중에도 명령을 처리하는지를 검사한다.
 
 실행 : python scripts/exam_base_test.py COM5
 LED 만 : python scripts/exam_base_test.py COM5 --led
+옵션 : --baud 9600
 LED 와 부저의 실제 동작은 눈과 귀로 확인한다. 보낼 때마다 볼 것을 출력한다.
 """
 
+import argparse
 import sys
 import time
 
@@ -85,17 +87,17 @@ def test_visible(board, led_only):
 
 
 def main():
-    args = [arg for arg in sys.argv[1:] if arg != "--led"]
-    led_only = "--led" in sys.argv
+    parser = argparse.ArgumentParser(description="시험용 통합 틀 기능 테스트")
+    parser.add_argument("port", help="예: COM5")
+    parser.add_argument("--baud", type=int, default=9600)
+    parser.add_argument("--led", action="store_true", help="LED 확인만 실행")
+    args = parser.parse_args()
 
-    if len(args) != 1:
-        sys.exit("사용법 : python scripts/exam_base_test.py COM5 [--led]")
+    board = Board(args.port, args.baud)
 
-    board = Board(args[0])
-
-    if not led_only:
+    if not args.led:
         test_auto(board)
-    test_visible(board, led_only)
+    test_visible(board, args.led)
 
     print(f"\n{sum(results)} / {len(results)} 통과", flush=True)
     sys.exit(0 if all(results) else 1)
