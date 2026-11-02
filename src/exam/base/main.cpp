@@ -558,11 +558,27 @@ void run_command() {
   }
 }
 
+// 디바운스 시간 안에 뗀 탭은 prev_pb 가 눌린 상태로 남아서 다음 입력을 놓친다.
+// 뗀 쪽만 맞춘다. 누른 쪽은 ISR 이 맡는다. 인터럽트를 끈 상태에서 부른다
+void sw_resync() {
+  byte now = PINB & 0x1C;
+
+  for (byte i = 0; i < SW_COUNT; i++) {
+    byte mask = 0x04 << i;
+
+    if ((now & (byte)~prev_pb & mask) && millis() - sw_edge[i] >= SW_DEBOUNCE_MS) {
+      sw_edge[i] = millis(); // 이어지는 튐을 새 입력으로 세지 않는다
+      prev_pb |= mask;
+    }
+  }
+}
+
 // 눌린 스위치를 꺼내서 패킷으로 보낸다
 void send_sw_events() {
   noInterrupts();
   byte event = sw_event;
   sw_event = 0;
+  sw_resync();
   interrupts();
 
   for (byte i = 0; i < SW_COUNT; i++) {

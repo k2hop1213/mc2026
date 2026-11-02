@@ -199,8 +199,13 @@ static volatile byte rx_head = 0;
 static volatile byte rx_tail = 0;
 
 ISR(USART_RX_vect) {
+  byte status = UCSR0A; // UDR0 를 읽기 전에 읽는다
   byte c = UDR0;
   byte next = (rx_head + 1) & (RX_SIZE - 1);
+
+  if (status & (1 << UPE0)) { // 패리티 오류 바이트는 버린다
+    return;
+  }
 
   if (next != rx_tail) { // 가득 차면 버린다
     rx_buf[rx_head] = c;
@@ -649,11 +654,27 @@ static void run_command(void) {
   }
 }
 
+// 디바운스 시간 안에 뗀 탭은 prev_pb 가 눌린 상태로 남아서 다음 입력을 놓친다.
+// 뗀 쪽만 맞춘다. 누른 쪽은 ISR 이 맡는다. 인터럽트를 끈 상태에서 부른다
+static void sw_resync(void) {
+  byte now = PINB & 0x1C;
+
+  for (byte i = 0; i < SW_COUNT; i++) {
+    byte mask = 0x04 << i;
+
+    if ((now & (byte)~prev_pb & mask) && ms_count - sw_edge[i] >= SW_DEBOUNCE_MS) {
+      sw_edge[i] = ms_count; // 이어지는 튐을 새 입력으로 세지 않는다
+      prev_pb |= mask;
+    }
+  }
+}
+
 // 눌린 스위치를 꺼내서 패킷으로 보낸다
 static void send_sw_events(void) {
   cli();
   byte event = sw_event;
   sw_event = 0;
+  sw_resync();
   sei();
 
   for (byte i = 0; i < SW_COUNT; i++) {
