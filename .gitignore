@@ -18,3 +18,7 @@ desktop.ini
 # ---- 기타 ----
 *.swp
 *.bak
+
+# ---- Python ----
+__pycache__/
+*.pyc
